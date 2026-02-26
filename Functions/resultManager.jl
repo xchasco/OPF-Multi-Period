@@ -1,6 +1,6 @@
 # This function manages the model variable and the DataFrames of the Optimization solution
 
-function resultManager(model, genSolution, flowSolution, voltageSolution, solCosts, solCurt, solStorage, mFilePath, opfType, solver)
+function resultManager(model, genSolution, flowSolution, voltageSolution, solCosts, solCurt, solStorage, mFilePath, opfType, solver, path_folder_results)
 
     # model: The model created for optimization
     # genSolution: DataFrame containing the generators' solution
@@ -108,24 +108,37 @@ function resultManager(model, genSolution, flowSolution, voltageSolution, solCos
 
         println("\nFinal cost with the program: ", round(solCosts.operation_cost[end], digits = 2), " €/h")
         println("Program execution time: ", solve_time(model) * 1000, " ms")
-        println("\nDo you want to save the results in a CSV file?")
-        println("Press ENTER to confirm or any other input to deny")
-        saveCSV = readline(stdin)
+        # println("\nDo you want to save the results in a CSV file?")
+        # println("Press ENTER to confirm or any other input to deny")
+        # saveCSV = readline(stdin)
+
+        saveCSV = ""
+        confirmSaveCSV = ""
 
         if saveCSV == ""
             println("Saving in CSV will overwrite any existing data")
-            println("Are you sure you want to save?")
-            println("\nPress ENTER to confirm or any other input to deny")
-            confirmSaveCSV = readline(stdin)
+            # println("Are you sure you want to save?")
+            # println("\nPress ENTER to confirm or any other input to deny")
+            # confirmSaveCSV = readline(stdin)
 
             if confirmSaveCSV == ""
-                CSV.write("./Results/voltageSolution.csv", voltageSolution, delim = ";")
-                CSV.write("./Results/lineFlowSolution.csv", flowSolution, delim = ";")
-                CSV.write("./Results/generatorSolution.csv", genSolution, delim = ";")
-                CSV.write("./Results/costsSolution.csv", solCosts, delim = ";")
-                CSV.write("./Results/curtailmentSolution.csv", solCurt, delim = ";")
-                CSV.write("./Results/storageSolution.csv", solStorage, delim = ";")
-                println("\nThe results have been saved in ./Results")
+
+                # CSV.write("./Results/voltageSolution.csv", voltageSolution, delim = ";")
+                # CSV.write("./Results/lineFlowSolution.csv", flowSolution, delim = ";")
+                # CSV.write("./Results/generatorSolution.csv", genSolution, delim = ";")
+                # CSV.write("./Results/costsSolution.csv", solCosts, delim = ";")
+                # CSV.write("./Results/curtailmentSolution.csv", solCurt, delim = ";")
+                # CSV.write("./Results/storageSolution.csv", solStorage, delim = ";")
+                # println("\nThe results have been saved in ./Results")
+
+                cd(path_folder_results)
+                CSV.write("voltageSolution.csv", voltageSolution, delim = ";")
+                CSV.write("lineFlowSolution.csv", flowSolution, delim = ";")
+                CSV.write("generatorSolution.csv", genSolution, delim = ";")
+                CSV.write("costsSolution.csv", solCosts, delim = ";")
+                CSV.write("curtailmentSolution.csv", solCurt, delim = ";")
+                CSV.write("storageSolution.csv", solStorage, delim = ";")
+                println("\nThe results have been saved in $path_folder_results")
             else
                 println("\nResults will not be saved")
             end

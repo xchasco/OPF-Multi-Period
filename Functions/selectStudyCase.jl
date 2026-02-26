@@ -9,18 +9,21 @@ function selectStudyCase()
 
         # List of OPF types available for selection
         opfTypeList = ["DC-OPF", "AC-OPF"]
-        opfType = chooseOption(opfTypeList, "type of OPF")
+        # opfType = chooseOption(opfTypeList, "type of OPF")
+
+        opfType = "DC-OPF"
+        solver = "Gurobi"
 
         # Based on the selected OPF type, ask for the solver to be used
-        if opfType == "DC-OPF"
-            lpSolversList = ["Gurobi", "HiGHS", "Ipopt"]
-            solver = chooseOption(lpSolversList, "solver")
+        # if opfType == "DC-OPF"
+        #     lpSolversList = ["Gurobi", "HiGHS", "Ipopt"]
+        #     solver = chooseOption(lpSolversList, "solver")
 
-        elseif opfType == "AC-OPF"
-            acSolversList = ["Ipopt", "Couenne"]
-            solver = chooseOption(acSolversList, "solver")
+        # elseif opfType == "AC-OPF"
+        #     acSolversList = ["Ipopt", "Couenne"]
+        #     solver = chooseOption(acSolversList, "solver")
             
-        end
+        # end
 
         # Clear the terminal
         clearTerminal()

@@ -1,13 +1,14 @@
-function extractData(c::String)
+function extractData(current_path::String, path_input_data::String, c::String)
+    cd(path_input_data)
     # Line data
-    lineData = CSV.read("Cases/$c/lineData.csv", DataFrame)
+    lineData = CSV.read("./$c/lineData.csv", DataFrame)
 
     # Generator data
-    generatorData = CSV.read("Cases/$c/generatorData.csv", DataFrame)
+    generatorData = CSV.read("./$c/generatorData.csv", DataFrame)
 
     
     # Demand data
-    demandPath = "Cases/$c/demandData/"
+    demandPath = "./$c/demandData/"
 
     if isdir(demandPath)
         #If the directory demandData exists, read all files nodeData_X.csv
@@ -15,17 +16,17 @@ function extractData(c::String)
         nodeDataList = [CSV.read(joinpath(demandPath, file), DataFrame) for file in nodeFiles] # Here we create a list of DataFrames with each hourly file.
     else
         #If demanData doesnt exist, we read a single demand file
-        nodeDataList = CSV.read("Cases/$c/nodeData.csv", DataFrame)
+        nodeDataList = CSV.read("./$c/nodeData.csv", DataFrame)
     end
 
     # Solar Gen data
-    solarData = CSV.read("Cases/$c/solarData.csv", DataFrame)
+    solarData = CSV.read("./$c/solarData.csv", DataFrame)
 
     # Wind Gen data
-    windData = CSV.read("Cases/$c/windData.csv", DataFrame)
+    windData = CSV.read("./$c/windData.csv", DataFrame)
 
     # Battery data
-    storageData = CSV.read("Cases/$c/storage.csv", DataFrame)
+    storageData = CSV.read("./$c/storage.csv", DataFrame)
 
     # Number of nodes
     nNodes = maximum([lineData.fbus; lineData.tbus])
@@ -37,7 +38,7 @@ function extractData(c::String)
     baseMVA = 100
 
     # Path to the .m file
-    mFilePath = "Cases/$c/$c.m"
+    mFilePath = "./$c/$c.m"
 
     if isfile(mFilePath)
         path = mFilePath
@@ -47,6 +48,8 @@ function extractData(c::String)
 
     #Analyzed hours
     hours = length(nodeDataList)
+
+    cd(current_path)
 
     # Return all generated DataFrames and variables
     return(lineData, generatorData, nodeDataList, nNodes, nLines, baseMVA, path, hours, solarData, windData, storageData)
