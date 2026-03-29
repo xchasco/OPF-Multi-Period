@@ -1,25 +1,51 @@
+cd(dirname(@__FILE__));
+
+using Distributions, Random, JuMP, MathOptInterface, DataStructures
+
+Random.seed!(4321);
+
 # Load all Libraries
 include("./Functions/loadLibraries.jl")
 
 # Load all Functions
 include("./Functions/loadFunctions.jl")
 
+# Read all the folder names needed
+include("./read_folder_names_function.jl")
+
+current_path = pwd()
+path_root_results = "$current_path\\Results"
+# path_root_input_data = "$current_path\\Cases\\Cases_Week_cap_mod"
+path_root_input_data = "$current_path\\Cases"
+
+
 # First, tests are loaded for a faster solver load
 # boot()
 
 # Variable for loop end
 endProgram = false
-# In case we are not at the end of the program
-while !endProgram
+
+all_cases = read_folder_names()
+
+# Run only once to generate the folders in the Results path
+# for name in all_cases
+#     mkdir("./Results/$name") 
+# end
+
+total_costs_per_case = DataFrames.DataFrame(case_name = String[], total_cost = Float64[])
+total_curtailment_per_case = DataFrames.DataFrame(case_name = String[], total_curtailment = Float64[])
+
+
+for case in all_cases
+    # case = all_cases[2]
+
+    path_folder_results = "$current_path\\Results\\$case"
+    opfType = "DC-OPF"
+    solver = "Gurobi" # Gurobi
+
 
     # Clean Terminal
-    clearTerminal()
-
-    # Enter into a loop to select the study case
-    case, opfType, s = selectStudyCase()
-
-    # Clean Terminal
-    clearTerminal()
+    # clearTerminal()
 
     # Extract data from the study case
     # Where:
@@ -36,25 +62,27 @@ while !endProgram
     #   data[11] = data from batteries storage
 
     println("\nExtracting data...")
-    data = extractData(case)
+    data = extractData(current_path, path_root_input_data, case)
     println("Data extracted.")
 
     hours = data[8]
+
+    # max_gen_nonres = sum(data[2].Pmax)
+    # for i in 1:hours
+    #     sym = Symbol("h",i)
+    #     max_gen_res = sum(data[9].sym) + sum(data[10].sym)
+    #     demand = 
+    # end
+    
 
     # Once the study case is selected, call the corresponding function to solve the optimization problem
     println("\nGenerating OPF...")
     # In case of an DC-OPF
     if opfType == "DC-OPF"
-        m, solGen, solFlows, solVoltage, solCosts, solCurt, solStorage = DC_OPF(data[1], data[2], data[3], data[4], data[5], data[6], s, hours, data[9], data[10], data[11])
-
-    # In case of an AC-OPF
-    elseif opfType == "AC-OPF"
-        m, solGen, solFlows, solVoltage = AC_OPF(data[1], data[2], data[3], data[4], data[5], data[6], s)
-
+        m, solGen, solFlows, solVoltage, solCosts, solCurt, solStorage = DC_OPF(data[1], data[2], data[3], data[4], data[5], data[6], solver, hours, data[9], data[10], data[11])
     # If none of the above cases apply, return an error
     else
         println("ERROR: Failed to load OPF type")
-
     end
 
     # Clean terminal
@@ -62,17 +90,73 @@ while !endProgram
 
     # Optimization results management
     println("Problem solved")
-    resultManager(m, solGen, solFlows, solVoltage, solCosts, solCurt, solStorage, data[7], opfType, s)
+    resultManager(m, solGen, solFlows, solVoltage, solCosts, solCurt, solStorage, data[7], opfType, solver, path_folder_results)
 
-    # Ask the user if they want to continue the loop to study another case
-    println("\nPress ENTER to continue or any other input to exit.")
-    if readline() == ""
-        # Keep the variable false to continue the loop
-        endProgram = false
-    else
-        # Update the variable to exit the loop
-        endProgram = true
-        exit()
+    endProgram = true
+
+    cd(path_folder_results)
+
+    open("model_jump.txt", "w") do io
+        io_full = IOContext(io, :limit => false, :compact => false)
+
+        # ----------------
+        # Model summary
+        # ----------------
+        println(io_full, "================")
+        println(io_full, "JuMP Model Info")
+        println(io_full, "================")
+        show(io_full, MIME("text/plain"), m)
+        println(io_full, "\n")
+
+        # ----------------
+        # Objective
+        # ----------------
+        println(io_full, "==========")
+        println(io_full, "Objective")
+        println(io_full, "==========")
+        println(io_full, JuMP.objective_sense(m))
+        println(io_full, JuMP.objective_function(m))
+        println(io_full, "\n")
+
+        # ----------------
+        # Variables
+        # ----------------
+        println(io_full, "==========")
+        println(io_full, "Variables")
+        println(io_full, "==========")
+        for v in all_variables(m)
+            println(io_full, v)
+        end
+        println(io_full, "\n")
+
+        # ----------------
+        # Constraints
+        # ----------------
+        println(io_full, "============")
+        println(io_full, "Constraints")
+        println(io_full, "============")
+
+        for (F, S) in list_of_constraint_types(m)
+            println(io_full, "\n------------------------------------")
+            println(io_full, "Constraint type: ", F, " in ", S)
+            println(io_full, "------------------------------------")
+
+            for cref in all_constraints(m, F, S)
+                println(io_full, cref)
+            end
+        end
     end
 
+    cd(current_path)
+
+    push!(total_costs_per_case, (case, solCosts.operation_cost[end]))
+    push!(total_curtailment_per_case, (case, sum(solCurt.P_curtailment)))
+    
+
 end
+
+cd(path_root_results)
+CSV.write("total_costs.csv", total_costs_per_case, delim = ";")
+CSV.write("total_curtailment.csv", total_curtailment_per_case, delim = ";")
+
+cd(current_path)
